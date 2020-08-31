@@ -1,0 +1,54 @@
+//floorplan e special route er pore egula, bujhso ?
+
+globalNetConnect VDD -type pgpin -pin VDD -inst * 
+globalNetConnect VSS -type pgpin -pin VSS -inst *
+
+//CTS ekhan theke suru
+
+create_route_type -name clkroute -bottom_preferred_layer Metal3 -top_preferred_layer Metal4
+set_ccopt_property route_type clkroute -net_type trunk 
+set_ccopt_property route_type clkroute -net_type leaf
+
+set_ccopt_property buffer_cells {CLKBUFX8 CLKBUFX12} 
+set_ccopt_property inverter_cells {CLKINVX8 CLKINVX12} 
+set_ccopt_property clock_gating_cells TLATNTSCA*
+
+create_ccopt_clock_tree_spec -file ccopt.spec 
+source ccopt.spec
+ccopt_design -cts
+
+optDesign -postCTS 
+timeDesign -postCTS
+saveDesign MyDesign/cts.enc
+report_timing
+
+
+***************POSTROUTE**********
+
+setExtractRCMode -engine postRoute 
+setExtractRCMode -effortLevel high 
+setAnalysisMode -analysisType onChipVariation -cppr both
+timeDesign -postRoute
+timeDesign -postRoute -hold
+optDesign -postRoute -setup -hold
+
+
+**************Verify Geo***************
+
+****add fill******************
+
+source export_gds.tcl
+
+
+
+
+********************virtuoso*****************
+
+
+***************TESTBENCH***********************
+begin
+$shm_open("shm.db",1); // Opens a waveform database
+$shm_probe("AS"); // Saves all signals to database
+#50 $finish;
+#100 $shm_close(); // Closes the waveform database
+end
